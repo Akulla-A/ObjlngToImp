@@ -1,0 +1,11 @@
+(ocamllex
+ (modules objlnglexer))
+(menhir
+ (modules objlngparser)
+ (flags --explain --dump)
+ (infer true))
+(executable
+ (name objlngc)
+ (promote (until-clean))
+ (flags ()))
+(env (dev (flags (:standard -w -50))))
