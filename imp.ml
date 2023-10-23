@@ -27,6 +27,8 @@ type expression =
   | Deref of expression   (*   *e   *)
   (* Allocate some memory *)
   | Alloc of expression
+  | Addr of string
+  | DCall of expression * expression list
 (**
    An expression:
      (1 + x) * f(3, true)

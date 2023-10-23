@@ -262,6 +262,17 @@ let tr_function fdef =
        Boolean [true] is coded by 1 and boolean [false] by 0. *)
     | Cst(n)  -> li t0 n
     | Bool(b) -> if b then li t0 1 else li t0 0
+    | Addr(n) -> la t0 n
+    | DCall(fAddr, params) ->
+       let params_code =
+         List.fold_right
+           (fun e code -> code @@ tr_expr e @@ push t0)
+           params nop
+       in
+       params_code (* STEP 1 *)
+       @@ (tr_expr fAddr)
+       @@ jalr t0
+       @@ addi sp sp (4 * List.length params) (* STEP 4 *)
 
     (* Case of a variable. Look up the identifier in the local environement
        [env] to know the offset, then read at the obtained offset from the
