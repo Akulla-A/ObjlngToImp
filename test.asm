@@ -314,7 +314,7 @@ main:
 	lw $t1, 0($sp)
 	addi $sp, $sp, 4
 	sw $t0, 0($t1)
-	li $t0, 12
+	li $t0, 16
 	move $a0, $t0
 	li $v0, 9
 	syscall
@@ -323,11 +323,14 @@ main:
 	lw $t0, -8($fp)
 	subi $sp, $sp, 4
 	sw $t0, 0($sp)
-	la $t0, point_descr
+	la $t0, point3D_descr
 	lw $t0, 0($t0)
 	lw $t1, 0($sp)
 	addi $sp, $sp, 4
 	sw $t0, 0($t1)
+	li $t0, 0
+	subi $sp, $sp, 4
+	sw $t0, 0($sp)
 	li $t0, 1
 	subi $sp, $sp, 4
 	sw $t0, 0($sp)
@@ -337,8 +340,8 @@ main:
 	lw $t0, -8($fp)
 	subi $sp, $sp, 4
 	sw $t0, 0($sp)
-	jal point_constructor
-	addi $sp, $sp, 12
+	jal point3D_constructor
+	addi $sp, $sp, 16
 	li $t0, 48
 	subi $sp, $sp, 4
 	sw $t0, 0($sp)

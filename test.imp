@@ -36,9 +36,9 @@ function main() {
   *(point_descr + 0) = 0;
   *(point_descr + 8) = &point_sum;
   *(point_descr + 4) = &point_constructor;
-  p = alloc(12);
-  *p = point_descr;
-  point_constructor(p, 2, 1);
+  p = alloc(16);
+  *p = point3D_descr;
+  point3D_constructor(p, 2, 1, 0);
   c = *(*p + 8)(p, 48);
   putchar(c);
 }

@@ -27,9 +27,9 @@ class point3D extends point {
 }
 
 function void main() {
-    var point p;
+    var point3D p;
     var int c;
-    p = new point(2, 1);
+    p = new point3D(2, 1, 0);
     c = p.sum(48);
     putchar(c);
 } 
