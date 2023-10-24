@@ -284,8 +284,8 @@ let translate_program (p: Objlng.program) =
     | Bool b -> Bool b
     | Var v -> Var v
     | Binop(op, e1, e2) -> Binop(tr_op op, tr_expr env e1 , tr_expr env e2)
-    | InstanceOf(e1, e2) ->
-      (*Imp.Seq([
+    (*| InstanceOf(e1, e2) ->
+      Imp.Seq([
         Set(Var(("_instanceof_ptr", TInt)), Deref(tr_expr env e1));
         While(Binop(Lt, Var(("_instanceof_ptr", TInt)),
           [Expr (Var(e2 ^ "_descr"))]));

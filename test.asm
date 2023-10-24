@@ -501,6 +501,8 @@ atoi_error:
 atoi_end:
 	jr $ra
 .data
+_instanceof_ptr:
+	.word 0
 point3D_descr:
 	.word 0
 point_descr:
