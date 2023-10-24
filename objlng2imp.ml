@@ -48,7 +48,8 @@ let translate_program (p: Objlng.program) =
 
   let getClassByName n =
     let findStruct = List.find_opt (fun (blob: Objlng.class_def) -> blob.name = n) p.classes in
-    if(Option.is_none findStruct) then failwith "Struct does not exists";
+    if(Option.is_none findStruct) then 
+      failwith ("Class " ^ n ^ " does not exists");
     Option.get findStruct in
 
   let rec sizeOfStruct (s: Objlng.typ) =
@@ -78,7 +79,7 @@ let translate_program (p: Objlng.program) =
       ) + 4
     with
       | _ -> (match c.parent with 
-        | None -> failwith ("Couldn't find attribute " ^ attrName ^ "in this class: " ^ c.name)
+        | None -> failwith ("Class " ^ className ^ " and his parents does not have a attribute " ^ attrName)
         | Some n -> getClassAttrOffsetByName attrName n
       ) in
 
@@ -92,7 +93,7 @@ let translate_program (p: Objlng.program) =
       Option.get attr
     else
       (match c.parent with
-        | None -> failwith ("Couldn't find the pair " ^ c.name ^ " in the class " ^ c.name)
+        | None -> failwith ("Class " ^ className ^ " and his parents does not have a attribute " ^ attrName)
         | Some n -> getClassAttrPairByName attrName n
       ) in
 
@@ -150,7 +151,7 @@ let translate_program (p: Objlng.program) =
     | Var v -> 
       let var = Hashtbl.find_opt env v in
       if Option.is_none var then
-        failwith ("Couldn't find the variable" ^ v);
+        failwith ("Variable " ^ v ^ " is not declared in the env");
 
       Option.get var
     | Binop(op, e1, e2) -> if (op <> Lt) then TInt else TBool
@@ -158,13 +159,13 @@ let translate_program (p: Objlng.program) =
       let getFunc = List.find_opt (fun (f: Objlng.function_def) -> f.name = s) p.functions in
 
       if Option.is_none getFunc then
-        failwith ("Couldn't find the function: " ^ s);
+        failwith ("The function " ^ s ^ " does not exist");
 
       let getFunc = Option.get getFunc in
 
       List.iter2 (fun fParam expr ->
         if (type_expr env expr <> snd fParam) then
-          failwith "Calling a function with missmatching argument type"
+          failwith ("Calling a function with missmatching argument type. The missmatching argument is " ^ (fst fParam) ^ " of type " ^ (printType (snd fParam)) ^ ". The type of the given variable is " ^ (printType (type_expr env expr)))
       ) getFunc.params eList;
 
       getFunc.return
@@ -172,19 +173,19 @@ let translate_program (p: Objlng.program) =
       let r = type_expr env exp in
       let structName = (match r with
         | TClass n -> n
-        | _ -> failwith "Calling a object function on a expression that is not a class") in
+        | _ -> failwith ("A Non-class expression is trying to call the function object " ^ s)) in
       let c = getClassByName structName in
       let f = List.find_opt (fun (f: Objlng.function_def) -> f.name = s) c.methods in
 
       if Option.is_none f then
-        failwith ("Couldn't find the object function: " ^ s);
+        failwith ("Class " ^ structName ^ " does not exist");
 
       (*  Hashtbl.add cache l'ancienne valeur, ce qui est parfait pour nous, pas besoin de recréer une hashtbl*)
       Hashtbl.add env "this" r;
 
       List.iter2 (fun fParam expr ->
         if (type_expr env expr <> snd fParam) then
-          failwith "Calling a function with missmatching argument type"
+          failwith ("Calling a class function with missmatching argument type. The missmatching argument is " ^ (fst fParam) ^ " of type " ^ (printType (snd fParam)) ^ ". The type of the given variable is " ^ (printType (type_expr env expr)))
       ) (Option.get f).params eList;
 
       Hashtbl.remove env "this";
@@ -199,14 +200,14 @@ let translate_program (p: Objlng.program) =
       if Option.is_some constructor then
         List.iter2 (fun fParam expr ->
           if (type_expr env expr <> snd fParam) then
-            failwith "Calling a function with missmatching argument type"
+            failwith ("Calling the constructor of " ^ n ^ " with missmatching argument type. The missmatching argument is " ^ (fst fParam) ^ " of type " ^ (printType (snd fParam)) ^ ". The type of the given variable is " ^ (printType (type_expr env expr)))
         ) (Option.get constructor).params eList;
 
       TClass n
     | NewTab(typ, expr) ->
       let t = type_expr env expr in
       if(type_expr env expr <> TInt) then 
-        failwith ("Creating a array with a size that is not a integer, the size is a " ^ (printType t));
+        failwith ("Creating a array with a size that is not a integer, type of the value used for the size: " ^ (printType t));
 
       TArray typ
     | This -> 
@@ -222,7 +223,7 @@ let translate_program (p: Objlng.program) =
 
         let n = (match eLeft with
           | TClass n -> n
-          | _ -> "Trying to read as a TStruct a variable that is not a TStruct") in
+          | _ -> ("Trying to read a class attribute on a variable that is not a class instance. Attribute Name: " ^ argName ^ ". Type of the variable: " ^ (printType eLeft))) in
 
         let foundArg = getClassAttrPairByName argName n in
         snd foundArg
@@ -230,31 +231,31 @@ let translate_program (p: Objlng.program) =
         let eLeft = type_expr env e1 in
 
         if(type_expr env e2 <> TInt) then
-          failwith "Reading a TArray with a index that is not a TInt";
+          failwith ("Reading a array with a index that is not a int. Type of the value: " ^ (printType(type_expr env e2)));
 
         (match eLeft with
           | TArray(t) -> t
-          | _ -> failwith "Trying to read Array(e1, argName), is not a TArray") in
+          | _ -> failwith ("Trying to read as an array a value that is not a array. Type of the value: " ^ (printType eLeft))) in
 
   let rec type_seq env s = List.iter (type_instr env) s
   and type_instr env: Objlng.instruction -> unit = function
     | Putchar e -> 
       if (type_expr env e <> TInt) then
-        failwith "Putchar argument is not a TInt";
+        failwith ("Putchar argument is not a TInt. Type of the value : " ^ (printType (type_expr env e)));
     | Set (s, e2) -> 
       let varType = Hashtbl.find_opt env s in
 
       if Option.is_none varType then
-        failwith ("Trying to set a variable that does not exist " ^ s);
+        failwith ("Trying to set a variable " ^ s ^ " that does not exist");
 
       if (type_expr env e2 <> Option.get varType) then
-        failwith "Type error on Set";
+        failwith ("Missmatch left and right part of Set. The left part is " ^ s ^ ", of type " ^ (printType (Option.get varType)) ^ ". Right part is a " ^ (printType (type_expr env e2)));
     | If (cond, sT, sF) -> 
       if (type_expr env cond <> TBool) then
-        failwith ("If condition is not a TBool. Is a " ^ (printType (type_expr env cond)));
+        failwith ("The if condition is not a boolean. Type of the condition: " ^ (printType (type_expr env cond)));
     | While (e, seq) -> 
       if (type_expr env e <> TBool) then
-        failwith ("While condition is not a TBool. Is a " ^ (printType (type_expr env e)));
+        failwith ("While condition is not a boolean. Type of the condition: " ^ (printType (type_expr env e)));
 
     | Return (e) -> ();
     | Expr(e) -> ()
@@ -262,7 +263,7 @@ let translate_program (p: Objlng.program) =
       let tLeft = type_mem env e1 in
       let tRight = type_expr env e2 in
       if(tLeft <> tRight) then
-        failwith ("Write on different types variables. Left is " ^ (printType tLeft) ^ ". Right is " ^ (printType tRight)) in
+        failwith ("Write on different types variables. Left type is " ^ (printType tLeft) ^ ". Right type is " ^ (printType tRight)) in
 
   (* Appeler type_expr avant *)
   let rec tr_expr env: Objlng.expression -> Imp.expression = function
@@ -288,7 +289,7 @@ let translate_program (p: Objlng.program) =
     | MCall(exp, s, eList) ->
       let structName = (match type_expr env exp with
       | TClass n -> n
-      | _ -> failwith "Calling a object function on a expression that is not a class") in
+      | _ -> failwith "Calling a object function (" ^ s ^ ") on a expression that is not a class. Type of the exp: " ^ (printType (type_expr env exp))) in
 
       (*? Vérifier appels pour parent si fonction manque ?*)
       Hashtbl.add env "this" (type_expr env exp);
@@ -305,7 +306,7 @@ let translate_program (p: Objlng.program) =
       let e1expr = type_expr env e1 in
       let structName = (match e1expr with
         | TClass n -> n
-        | _ -> failwith "Using Atr on something else than TClass") in
+        | _ -> failwith "Trying to get the attribute " ^ attrName ^ " on a value that is not a class (This is a " ^ (printType e1expr) ^ ").") in
 
       Binop(Add, tr_expr env e1, Cst(getClassAttrOffsetByName attrName structName))
     | Arr(e1, e2) -> Binop(Add, tr_expr env e1, Binop(Mul, tr_expr env e2, Cst 4))
