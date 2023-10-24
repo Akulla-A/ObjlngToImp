@@ -24,12 +24,20 @@ class point3D extends point {
   method int sum(int z){
     return z + this.x + this.y + this.z;
   }
+
+  method int getValues(){
+    return this.x + this.y + this.z;
+  }
 }
 
 function void main() {
     var point3D p;
     var int c;
+    var point p2D;
+
     p = new point3D(2, 1, 0);
     c = p.sum(48);
+
+    p2D = new point(2, 1);
     putchar(c);
 } 

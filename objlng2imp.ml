@@ -95,6 +95,54 @@ let translate_program (p: Objlng.program) =
         | None -> failwith ("Couldn't find the pair " ^ c.name ^ " in the class " ^ c.name)
         | Some n -> getClassAttrPairByName attrName n
       ) in
+
+  let rec findMethodIndex (c: string) fName =
+    let functionTbl = Hashtbl.create 20 in
+
+    let rec findIndex (cName: string) fName =
+      let c = getClassByName cName in
+
+      let res = (match c.parent with
+        | Some n -> findIndex n fName
+        | None -> 0
+      ) in
+
+      if res = -1 then
+        let flag = ref false in
+        List.iter (fun (fDef: Objlng.function_def) ->
+          if fDef.name = fName then
+            flag := true
+          else if (!flag = false) && fDef.name != "constructor" then
+            Hashtbl.add functionTbl fDef.name true;
+        ) c.methods;
+
+        if !flag = true then
+          Hashtbl.length functionTbl
+        else
+          -1 
+      else
+        res
+      
+      in
+
+    findIndex c fName in
+
+  let rec getAllClassMethodsIndex (c: string) =
+    let functionTbl = Hashtbl.create 20 in
+
+    let rec loop (cName: string) =
+      let c = getClassByName cName in
+
+      if Option.is_some c.parent then
+        loop (Option.get c.parent);
+
+      List.iter(fun (a: Objlng.function_def) ->
+        if Option.is_none (Hashtbl.find_opt functionTbl a.name) && not (a.name = "constructor") then
+          Hashtbl.add functionTbl a.name (Hashtbl.length functionTbl)
+      ) c.methods in
+
+    loop c;
+    functionTbl in
     
   let rec type_expr env: Objlng.expression -> Objlng.typ = function
     | Cst n -> TInt
@@ -242,18 +290,14 @@ let translate_program (p: Objlng.program) =
       | TClass n -> n
       | _ -> failwith "Calling a object function on a expression that is not a class") in
 
-      let c = getClassByName structName in
-
       (*? Vérifier appels pour parent si fonction manque ?*)
       Hashtbl.add env "this" (type_expr env exp);
       let impCall = List.map (fun e -> tr_expr env e) (exp :: eList) in
       let classDescriptorAddr = Imp.Deref (tr_expr env exp) in
       Hashtbl.remove env "this";
 
-      let funcIndex = (getIndex(fun (f: Objlng.function_def) -> f.name = s) c.methods + 1) in
-
       DCall(
-        Deref(Binop(Add, classDescriptorAddr, Cst(funcIndex * 4))), 
+        Deref(Binop(Add, classDescriptorAddr, Cst((findMethodIndex structName s + 1) * 4))), 
         impCall
       )
   and tr_mem env: Objlng.mem -> Imp.expression = function
@@ -278,23 +322,17 @@ let translate_program (p: Objlng.program) =
 
       (match e2 with
         | New(n, e) -> 
-          let c = List.find (fun (blob: Objlng.class_def) -> blob.name = n) p.classes in
           let impCall = List.map (fun e -> tr_expr env e) e in
-          let funcIndex = (getIndex(fun (f: Objlng.function_def) -> f.name = "constructor") c.methods + 1) in
+          let funClass = getAllClassMethodsIndex n in
 
           Seq([
             expr;
             Write(Var(s), Var(n ^ "_descr"));
-            
-            Expr(
-              Call(c.name ^ "_" ^ "constructor", ((Var s) :: impCall))
-            )
 
-            (*
             Expr(Imp.DCall(
-              Deref(Binop(Add, Var(n ^ "_descr"), Cst(funcIndex * 4))),
+              Deref(Binop(Add, Var(n ^ "_descr"), Cst((1 + Hashtbl.length funClass) * 4))),
               ((Var s) :: impCall)
-            ))*)
+            ))
           ])
         | _ -> expr)
     | If (cond, sT, sF) ->  If (tr_expr env cond, tr_seq env sT, tr_seq env sF)
@@ -332,9 +370,19 @@ let translate_program (p: Objlng.program) =
     let formatted = tr_fdef main in
   
     let newCode = List.fold_left (fun (code: Imp.sequence) (c: Objlng.class_def) ->
-      let accFun = ref 0 in
-  
-      Imp.Set(c.name ^ "_descr", Alloc (Cst((List.length c.methods + 1)*4))) 
+      let funClass = getAllClassMethodsIndex c.name in
+
+      (* On prends le constructeur, pour le bouger ensuite à la fin de la liste *)
+      let newFuncList = List.fold_right (fun (f: Objlng.function_def) acc ->
+        if not (f.name = "constructor") then
+          f :: acc
+        else
+          acc
+        ) c.methods [] in
+      let newFuncList = newFuncList in
+
+      (* Les instructions *)
+      Imp.Set(c.name ^ "_descr", Alloc (Cst(((Hashtbl.length funClass) + 1 + 1)*4))) 
       ::
       Imp.Write(Binop(Add, Var(c.name ^ "_descr"), Cst 0), 
         if Option.is_none c.parent then 
@@ -342,15 +390,20 @@ let translate_program (p: Objlng.program) =
         else
           Var ((Option.get c.parent) ^ "_descr")) 
       ::
+      Imp.Write(
+        (Binop(Add, Var(c.name ^ "_descr"), Cst(((Hashtbl.length funClass) + 1) * 4))),
+        (Addr (c.name ^ "_constructor")))
+      ::
       List.fold_left(fun (codeAcc: Imp.sequence) (f: Objlng.function_def) ->
-        accFun := (!accFun + 4);
+        let funcIndex = Hashtbl.find funClass f.name in
+
         let funName = c.name ^ "_" ^ f.name in
         let writeFun = Imp.Write(
-        (Binop(Add, Var(c.name ^ "_descr"), Cst(!accFun))),
+        (Binop(Add, Var(c.name ^ "_descr"), Cst((funcIndex + 1) * 4))),
         (Addr funName)) in
   
         writeFun :: codeAcc
-      ) code c.methods
+      ) code newFuncList
     ) formatted.code cList in
   
     {

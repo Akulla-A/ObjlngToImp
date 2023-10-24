@@ -1,6 +1,11 @@
 var point3D_descr;
 var point_descr;
 
+function point3D_getValues(this) {
+  
+  return(((*(this + 4) + *(this + 8)) + *(this + 16)));
+}
+
 function point3D_sum(this, z) {
   
   return((((z + *(this + 4)) + *(this + 8)) + *(this + 16)));
@@ -27,19 +32,24 @@ function point_constructor(this, a, b) {
 function main() {
   var p;
   var c;
+  var p2D;
   
-  point3D_descr = alloc(12);
+  point3D_descr = alloc(16);
   *(point3D_descr + 0) = point_descr;
-  *(point3D_descr + 8) = &point3D_sum;
-  *(point3D_descr + 4) = &point3D_constructor;
+  *(point3D_descr + 12) = &point3D_constructor;
+  *(point3D_descr + 8) = &point3D_getValues;
+  *(point3D_descr + 4) = &point3D_sum;
   point_descr = alloc(12);
   *(point_descr + 0) = 0;
-  *(point_descr + 8) = &point_sum;
-  *(point_descr + 4) = &point_constructor;
+  *(point_descr + 8) = &point_constructor;
+  *(point_descr + 4) = &point_sum;
   p = alloc(16);
   *p = point3D_descr;
-  point3D_constructor(p, 2, 1, 0);
-  c = *(*p + 8)(p, 48);
+  *(point3D_descr + 12)(p, 2, 1, 0);
+  c = *(*p + 4)(p, 48);
+  p2D = alloc(12);
+  *p2D = point_descr;
+  *(point_descr + 8)(p2D, 2, 1);
   putchar(c);
 }
 
