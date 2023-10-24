@@ -8,20 +8,24 @@ init_end:
 	jal main
 	li $v0, 10
 	syscall
-point_sum:
+point3D_sum:
 	subi $sp, $sp, 4
 	sw $fp, 0($sp)
 	subi $sp, $sp, 4
 	sw $ra, 0($sp)
 	addi $fp, $sp, 4
 	addi $sp, $sp, 0
-	li $t0, 4
+	li $t0, 16
 	subi $sp, $sp, 4
 	sw $t0, 0($sp)
-	li $t0, 2
+	lw $t0, 4($fp)
 	lw $t1, 0($sp)
 	addi $sp, $sp, 4
-	mul $t0, $t0, $t1
+	add $t0, $t0, $t1
+	lw $t0, 0($t0)
+	subi $sp, $sp, 4
+	sw $t0, 0($sp)
+	li $t0, 8
 	subi $sp, $sp, 4
 	sw $t0, 0($sp)
 	lw $t0, 4($fp)
@@ -34,10 +38,107 @@ point_sum:
 	li $t0, 4
 	subi $sp, $sp, 4
 	sw $t0, 0($sp)
-	li $t0, 1
+	lw $t0, 4($fp)
 	lw $t1, 0($sp)
 	addi $sp, $sp, 4
-	mul $t0, $t0, $t1
+	add $t0, $t0, $t1
+	lw $t0, 0($t0)
+	subi $sp, $sp, 4
+	sw $t0, 0($sp)
+	lw $t0, 8($fp)
+	lw $t1, 0($sp)
+	addi $sp, $sp, 4
+	add $t0, $t0, $t1
+	lw $t1, 0($sp)
+	addi $sp, $sp, 4
+	add $t0, $t0, $t1
+	lw $t1, 0($sp)
+	addi $sp, $sp, 4
+	add $t0, $t0, $t1
+	addi $sp, $fp, -4
+	lw $ra, 0($sp)
+	addi $sp, $sp, 4
+	lw $fp, 0($sp)
+	addi $sp, $sp, 4
+	jr $ra
+	li $t0, 0
+	addi $sp, $fp, -4
+	lw $ra, 0($sp)
+	addi $sp, $sp, 4
+	lw $fp, 0($sp)
+	addi $sp, $sp, 4
+	jr $ra
+point3D_constructor:
+	subi $sp, $sp, 4
+	sw $fp, 0($sp)
+	subi $sp, $sp, 4
+	sw $ra, 0($sp)
+	addi $fp, $sp, 4
+	addi $sp, $sp, 0
+	li $t0, 4
+	subi $sp, $sp, 4
+	sw $t0, 0($sp)
+	lw $t0, 4($fp)
+	lw $t1, 0($sp)
+	addi $sp, $sp, 4
+	add $t0, $t0, $t1
+	subi $sp, $sp, 4
+	sw $t0, 0($sp)
+	lw $t0, 8($fp)
+	lw $t1, 0($sp)
+	addi $sp, $sp, 4
+	sw $t0, 0($t1)
+	li $t0, 8
+	subi $sp, $sp, 4
+	sw $t0, 0($sp)
+	lw $t0, 4($fp)
+	lw $t1, 0($sp)
+	addi $sp, $sp, 4
+	add $t0, $t0, $t1
+	subi $sp, $sp, 4
+	sw $t0, 0($sp)
+	lw $t0, 12($fp)
+	lw $t1, 0($sp)
+	addi $sp, $sp, 4
+	sw $t0, 0($t1)
+	li $t0, 16
+	subi $sp, $sp, 4
+	sw $t0, 0($sp)
+	lw $t0, 4($fp)
+	lw $t1, 0($sp)
+	addi $sp, $sp, 4
+	add $t0, $t0, $t1
+	subi $sp, $sp, 4
+	sw $t0, 0($sp)
+	lw $t0, 16($fp)
+	lw $t1, 0($sp)
+	addi $sp, $sp, 4
+	sw $t0, 0($t1)
+	li $t0, 0
+	addi $sp, $fp, -4
+	lw $ra, 0($sp)
+	addi $sp, $sp, 4
+	lw $fp, 0($sp)
+	addi $sp, $sp, 4
+	jr $ra
+point_sum:
+	subi $sp, $sp, 4
+	sw $fp, 0($sp)
+	subi $sp, $sp, 4
+	sw $ra, 0($sp)
+	addi $fp, $sp, 4
+	addi $sp, $sp, 0
+	li $t0, 8
+	subi $sp, $sp, 4
+	sw $t0, 0($sp)
+	lw $t0, 4($fp)
+	lw $t1, 0($sp)
+	addi $sp, $sp, 4
+	add $t0, $t0, $t1
+	lw $t0, 0($t0)
+	subi $sp, $sp, 4
+	sw $t0, 0($sp)
+	li $t0, 4
 	subi $sp, $sp, 4
 	sw $t0, 0($sp)
 	lw $t0, 4($fp)
@@ -77,12 +178,6 @@ point_constructor:
 	li $t0, 4
 	subi $sp, $sp, 4
 	sw $t0, 0($sp)
-	li $t0, 1
-	lw $t1, 0($sp)
-	addi $sp, $sp, 4
-	mul $t0, $t0, $t1
-	subi $sp, $sp, 4
-	sw $t0, 0($sp)
 	lw $t0, 4($fp)
 	lw $t1, 0($sp)
 	addi $sp, $sp, 4
@@ -93,13 +188,7 @@ point_constructor:
 	lw $t1, 0($sp)
 	addi $sp, $sp, 4
 	sw $t0, 0($t1)
-	li $t0, 4
-	subi $sp, $sp, 4
-	sw $t0, 0($sp)
-	li $t0, 2
-	lw $t1, 0($sp)
-	addi $sp, $sp, 4
-	mul $t0, $t0, $t1
+	li $t0, 8
 	subi $sp, $sp, 4
 	sw $t0, 0($sp)
 	lw $t0, 4($fp)
@@ -126,30 +215,130 @@ main:
 	sw $ra, 0($sp)
 	addi $fp, $sp, 4
 	addi $sp, $sp, -8
+	li $t0, 12
+	move $a0, $t0
+	li $v0, 9
+	syscall
+	move $t0, $v0
+	la $t1, point3D_descr
+	sw $t0, 0($t1)
+	li $t0, 0
+	subi $sp, $sp, 4
+	sw $t0, 0($sp)
+	la $t0, point3D_descr
+	lw $t0, 0($t0)
+	lw $t1, 0($sp)
+	addi $sp, $sp, 4
+	add $t0, $t0, $t1
+	subi $sp, $sp, 4
+	sw $t0, 0($sp)
+	la $t0, point_descr
+	lw $t0, 0($t0)
+	lw $t1, 0($sp)
+	addi $sp, $sp, 4
+	sw $t0, 0($t1)
+	li $t0, 8
+	subi $sp, $sp, 4
+	sw $t0, 0($sp)
+	la $t0, point3D_descr
+	lw $t0, 0($t0)
+	lw $t1, 0($sp)
+	addi $sp, $sp, 4
+	add $t0, $t0, $t1
+	subi $sp, $sp, 4
+	sw $t0, 0($sp)
+	la $t0, point3D_sum
+	lw $t1, 0($sp)
+	addi $sp, $sp, 4
+	sw $t0, 0($t1)
+	li $t0, 4
+	subi $sp, $sp, 4
+	sw $t0, 0($sp)
+	la $t0, point3D_descr
+	lw $t0, 0($t0)
+	lw $t1, 0($sp)
+	addi $sp, $sp, 4
+	add $t0, $t0, $t1
+	subi $sp, $sp, 4
+	sw $t0, 0($sp)
+	la $t0, point3D_constructor
+	lw $t1, 0($sp)
+	addi $sp, $sp, 4
+	sw $t0, 0($t1)
+	li $t0, 12
+	move $a0, $t0
+	li $v0, 9
+	syscall
+	move $t0, $v0
+	la $t1, point_descr
+	sw $t0, 0($t1)
+	li $t0, 0
+	subi $sp, $sp, 4
+	sw $t0, 0($sp)
+	la $t0, point_descr
+	lw $t0, 0($t0)
+	lw $t1, 0($sp)
+	addi $sp, $sp, 4
+	add $t0, $t0, $t1
+	subi $sp, $sp, 4
+	sw $t0, 0($sp)
+	li $t0, 0
+	lw $t1, 0($sp)
+	addi $sp, $sp, 4
+	sw $t0, 0($t1)
+	li $t0, 8
+	subi $sp, $sp, 4
+	sw $t0, 0($sp)
+	la $t0, point_descr
+	lw $t0, 0($t0)
+	lw $t1, 0($sp)
+	addi $sp, $sp, 4
+	add $t0, $t0, $t1
+	subi $sp, $sp, 4
+	sw $t0, 0($sp)
+	la $t0, point_sum
+	lw $t1, 0($sp)
+	addi $sp, $sp, 4
+	sw $t0, 0($t1)
+	li $t0, 4
+	subi $sp, $sp, 4
+	sw $t0, 0($sp)
+	la $t0, point_descr
+	lw $t0, 0($t0)
+	lw $t1, 0($sp)
+	addi $sp, $sp, 4
+	add $t0, $t0, $t1
+	subi $sp, $sp, 4
+	sw $t0, 0($sp)
+	la $t0, point_constructor
+	lw $t1, 0($sp)
+	addi $sp, $sp, 4
+	sw $t0, 0($t1)
+	li $t0, 12
+	move $a0, $t0
+	li $v0, 9
+	syscall
+	move $t0, $v0
+	sw $t0, -8($fp)
+	lw $t0, -8($fp)
+	subi $sp, $sp, 4
+	sw $t0, 0($sp)
+	la $t0, point_descr
+	lw $t0, 0($t0)
+	lw $t1, 0($sp)
+	addi $sp, $sp, 4
+	sw $t0, 0($t1)
 	li $t0, 1
 	subi $sp, $sp, 4
 	sw $t0, 0($sp)
 	li $t0, 2
 	subi $sp, $sp, 4
 	sw $t0, 0($sp)
-	li $t0, 12
-	move $a0, $t0
-	li $v0, 9
-	syscall
-	move $t0, $v0
+	lw $t0, -8($fp)
 	subi $sp, $sp, 4
 	sw $t0, 0($sp)
-	li $t0, 4
-	subi $sp, $sp, 4
-	sw $t0, 0($sp)
-	la $t0, point_descr
-	lw $t1, 0($sp)
-	addi $sp, $sp, 4
-	add $t0, $t0, $t1
-	lw $t0, 0($t0)
-	jalr $t0
+	jal point_constructor
 	addi $sp, $sp, 12
-	sw $t0, -8($fp)
 	li $t0, 48
 	subi $sp, $sp, 4
 	sw $t0, 0($sp)
@@ -198,5 +387,7 @@ atoi_error:
 atoi_end:
 	jr $ra
 .data
+point3D_descr:
+	.word 0
 point_descr:
 	.word 0

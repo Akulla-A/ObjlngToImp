@@ -58,6 +58,7 @@ type instruction =
   | Expr    of expression
   (* writing in memory *)
   | Write   of expression * expression (*   *e1 = e2;   *)
+  | Seq of sequence
 (* Instruction sequence *)
 and sequence = instruction list
 (**

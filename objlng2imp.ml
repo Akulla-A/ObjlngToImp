@@ -50,6 +50,51 @@ let translate_program (p: Objlng.program) =
     let findStruct = List.find_opt (fun (blob: Objlng.class_def) -> blob.name = n) p.classes in
     if(Option.is_none findStruct) then failwith "Struct does not exists";
     Option.get findStruct in
+
+  let rec sizeOfStruct (s: Objlng.typ) =
+    match s with
+      | TClass s -> 
+        let findStruct = getClassByName s in
+  
+        (*
+        List.fold_left (fun field acc -> (sizeOfStruct field) + acc ) (Option.get findStruct).fields 0*)
+        let sizeStruct = (List.length findStruct.fields) in
+        let parent = findStruct.parent in
+        let parentSize = (match parent with
+          | None -> 0
+          | Some n -> (sizeOfStruct (TClass n)) - 4) in
+  
+          sizeStruct * 4 + 4 + parentSize
+        | _ -> 4 in
+
+  let rec getClassAttrOffsetByName attrName className =
+    let c = List.find (fun (blob: Objlng.class_def) -> blob.name = className) p.classes in
+    try
+      let index = getIndex (fun (argN, typ) -> attrName = argN) c.fields in
+
+      index * 4 + (match c.parent with
+        | None -> 0
+        | Some n -> sizeOfStruct (TClass n)
+      ) + 4
+    with
+      | _ -> (match c.parent with 
+        | None -> failwith ("Couldn't find attribute " ^ attrName ^ "in this class: " ^ c.name)
+        | Some n -> getClassAttrOffsetByName attrName n
+      ) in
+
+  let rec getClassAttrPairByName attrName className =
+    let c = List.find (fun (blob: Objlng.class_def) -> blob.name = className) p.classes in
+    let attr = List.find_opt (fun var -> 
+      fst var = attrName  
+    ) c.fields in
+
+    if Option.is_some attr then
+      Option.get attr
+    else
+      (match c.parent with
+        | None -> failwith ("Couldn't find the pair " ^ c.name ^ " in the class " ^ c.name)
+        | Some n -> getClassAttrPairByName attrName n
+      ) in
     
   let rec type_expr env: Objlng.expression -> Objlng.typ = function
     | Cst n -> TInt
@@ -131,19 +176,8 @@ let translate_program (p: Objlng.program) =
           | TClass n -> n
           | _ -> "Trying to read as a TStruct a variable that is not a TStruct") in
 
-        let findStruct = List.find_opt (fun (blob: Objlng.class_def) -> blob.name = n) p.classes in
-
-        if(Option.is_none findStruct) then
-          failwith "Struct does not exists";
-        
-        let fields = (Option.get findStruct).fields in
-        let foundArg = List.find_opt (fun (argN, _) -> 
-          argName = argN
-          ) fields in
-
-        if Option.is_none foundArg then
-          failwith ("Couldn't find the value " ^ argName ^ " in the struct " ^ n);
-        snd (Option.get foundArg)
+        let foundArg = getClassAttrPairByName argName n in
+        snd foundArg
       | Arr (e1, e2) -> 
         let eLeft = type_expr env e1 in
 
@@ -181,19 +215,6 @@ let translate_program (p: Objlng.program) =
       let tRight = type_expr env e2 in
       if(tLeft <> tRight) then
         failwith ("Write on different types variables. Left is " ^ (printType tLeft) ^ ". Right is " ^ (printType tRight)) in
-
-  let rec sizeOfStruct (s: Objlng.typ) =
-    match s with
-      | TClass s -> 
-        let findStruct = List.find_opt (fun (blob: Objlng.class_def) -> blob.name = s) p.classes in
-
-        if(Option.is_none findStruct) then
-          failwith "Struct does not exists";
-
-        (*
-        List.fold_left (fun field acc -> (sizeOfStruct field) + acc ) (Option.get findStruct).fields 0*)
-        (List.length (Option.get findStruct).fields) * 4 + 4
-      | _ -> 4 in
 
   (* Appeler type_expr avant *)
   let rec tr_expr env: Objlng.expression -> Imp.expression = function
@@ -241,33 +262,41 @@ let translate_program (p: Objlng.program) =
       let structName = (match e1expr with
         | TClass n -> n
         | _ -> failwith "Using Atr on something else than TClass") in
-      let findStruct = List.find_opt (fun (blob: Objlng.class_def) -> blob.name = structName) p.classes in
 
-      if Option.is_none findStruct then
-        failwith ("Couldn't find the class " ^ structName);
-
-      let paramIndex = getIndex (fun (argN, typ) -> attrName = argN) (Option.get findStruct).fields in
-  
-      Binop(Add, tr_expr env e1, Binop(Mul, Cst (paramIndex + 1), Cst 4))
+      Binop(Add, tr_expr env e1, Cst(getClassAttrOffsetByName attrName structName))
     | Arr(e1, e2) -> Binop(Add, tr_expr env e1, Binop(Mul, tr_expr env e2, Cst 4))
   in
 
-  let rec tr_seq env s = List.map (tr_instr env) s
+  let rec tr_seq env s = List.map (
+    tr_instr env
+  ) s
+
   and tr_instr env: Objlng.instruction -> Imp.instruction = function
     | Putchar e     ->      Putchar(tr_expr env e) 
     | Set (s, e2) ->
-      let expr = Set (s, tr_expr env e2) in
-    
-      (match(type_expr env e2) with
-        | TClass n ->
+      let expr = Imp.Set (s, tr_expr env e2) in
+
+      (match e2 with
+        | New(n, e) -> 
           let c = List.find (fun (blob: Objlng.class_def) -> blob.name = n) p.classes in
           let impCall = List.map (fun e -> tr_expr env e) e in
           let funcIndex = (getIndex(fun (f: Objlng.function_def) -> f.name = "constructor") c.methods + 1) in
 
-          expr @@ Imp.DCall(
-            Deref(Binop(Add, Addr(n ^ "_descr"), Cst(funcIndex * 4))),
-            (Var s) :: impCall)
-        | (_) -> expr)
+          Seq([
+            expr;
+            Write(Var(s), Var(n ^ "_descr"));
+            
+            Expr(
+              Call(c.name ^ "_" ^ "constructor", ((Var s) :: impCall))
+            )
+
+            (*
+            Expr(Imp.DCall(
+              Deref(Binop(Add, Var(n ^ "_descr"), Cst(funcIndex * 4))),
+              ((Var s) :: impCall)
+            ))*)
+          ])
+        | _ -> expr)
     | If (cond, sT, sF) ->  If (tr_expr env cond, tr_seq env sT, tr_seq env sF)
     | While (e, seq) ->     While (tr_expr env e, tr_seq env seq)
     | Return (e) ->         Return (tr_expr env e)
@@ -307,7 +336,7 @@ let translate_program (p: Objlng.program) =
   
       Imp.Set(c.name ^ "_descr", Alloc (Cst((List.length c.methods + 1)*4))) 
       ::
-      Imp.Write(Binop(Add, Addr(c.name ^ "_descr"), Cst 0), 
+      Imp.Write(Binop(Add, Var(c.name ^ "_descr"), Cst 0), 
         if Option.is_none c.parent then 
           Cst 0
         else
@@ -317,7 +346,7 @@ let translate_program (p: Objlng.program) =
         accFun := (!accFun + 4);
         let funName = c.name ^ "_" ^ f.name in
         let writeFun = Imp.Write(
-        (Binop(Add, Addr(c.name ^ "_descr"), Cst(!accFun))),
+        (Binop(Add, Var(c.name ^ "_descr"), Cst(!accFun))),
         (Addr funName)) in
   
         writeFun :: codeAcc
@@ -334,7 +363,8 @@ let translate_program (p: Objlng.program) =
   {
     Imp.globals = List.map fst p.globals;
     functions = List.map (fun (f: Objlng.function_def) ->
-      if f.name != "main" then 
+
+      if not (f.name = "main") then 
         tr_fdef f
       else 
         (formatMainToClasses f p.classes)

@@ -12,6 +12,20 @@ class point {
     }
 }
 
+class point3D extends point {
+  attribute int z;
+
+  method void constructor(int a, int b, int c){
+    this.x = a;
+    this.y = b;
+    this.z = c;
+  }
+
+  method int sum(int z){
+    return z + this.x + this.y + this.z;
+  }
+}
+
 function void main() {
     var point p;
     var int c;

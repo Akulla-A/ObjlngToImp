@@ -397,6 +397,10 @@ let tr_function fdef =
        After evaluation of [e], its value is in $t0.
        Chose the right instruction to update memory depending on the
        local or global nature of the variable [id]. *)
+   | Seq(l) -> 
+      List.fold_left (fun acc ins ->
+         acc @@ (tr_instr ins)   
+      ) nop l
     | Set(id, e) ->
        let set_code = match Hashtbl.find_opt env id with
          | Some offset -> sw t0 offset fp
