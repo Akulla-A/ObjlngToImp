@@ -24,6 +24,7 @@ type expression =
   | NewTab of typ * expression (* create an array of the given type and size *)
   | Read  of mem               (* read in memory *)
   | This (* current object *)
+  | InstanceOf of expression * typ
 and mem =
   | Arr of expression * expression (* array access     e1[e2]  *)
   | Atr of expression * string     (* attribute access  o.x    *)

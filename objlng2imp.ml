@@ -46,6 +46,18 @@ let translate_program (p: Objlng.program) =
 
   let p = List.fold_left (fun prog c -> tr_cdef c prog) p p.classes in
 
+  (* 
+    Ajout de la variable global pour le instanceof
+     On doit stocker l'addresse et faire une boucle dessus, pour éviter un code horrible
+     L'autre option était des if dans des if
+  *)
+
+  let (p: Objlng.program) = {
+    classes = p.classes;
+    functions = p.functions;
+    globals = ("_instanceof_ptr", TInt) :: p.globals
+  } in
+
   let getClassByName n =
     let findStruct = List.find_opt (fun (blob: Objlng.class_def) -> blob.name = n) p.classes in
     if(Option.is_none findStruct) then 
@@ -148,6 +160,7 @@ let translate_program (p: Objlng.program) =
   let rec type_expr env: Objlng.expression -> Objlng.typ = function
     | Cst n -> TInt
     | Bool b -> TBool
+    | InstanceOf _ -> TBool
     | Var v -> 
       let var = Hashtbl.find_opt env v in
       if Option.is_none var then
@@ -271,6 +284,12 @@ let translate_program (p: Objlng.program) =
     | Bool b -> Bool b
     | Var v -> Var v
     | Binop(op, e1, e2) -> Binop(tr_op op, tr_expr env e1 , tr_expr env e2)
+    | InstanceOf(e1, e2) ->
+      (*Imp.Seq([
+        Set(Var(("_instanceof_ptr", TInt)), Deref(tr_expr env e1));
+        While(Binop(Lt, Var(("_instanceof_ptr", TInt)),
+          [Expr (Var(e2 ^ "_descr"))]));
+      ])*)
     | Call(s, eList) -> 
       let impCall = List.map (fun e -> tr_expr env e) eList in
       Call(s, impCall)

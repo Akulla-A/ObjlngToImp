@@ -17,6 +17,7 @@
 %token <string> IDENT
 %token TYP_INT TYP_BOOL TYP_VOID
 %token VAR FUNCTION
+%token INSTANCEOF
 %token ATTRIBUTE METHOD EXTENDS CLASS THIS
 %token DOT NEW LBRACKET RBRACKET
 %token LPAR RPAR BEGIN END COMMA SEMI
@@ -124,6 +125,7 @@ expression:
 | NEW LBRACKET ty=typ COMMA e=expression RBRACKET { NewTab(ty, e) }
 | m=mem_access { Read m }
 | THIS { This }
+| e=expression INSTANCEOF e2=typ { InstanceOf(e, e2) }
 ;
 
 %inline binop:
